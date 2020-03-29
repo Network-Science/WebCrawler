@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2,
+  "name": "Lyricly",
+  "version": "1.0",
+
+  "description": "Get lyrics for current YouTube video",
+
+  "permissions": [
+    "webNavigation"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
