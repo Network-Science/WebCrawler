@@ -1,34 +1,31 @@
+//
+// Getters for song information
+// Note: Prefer classes as IDs are not used and classes are very specific
+//
 
-// Find title in video page based on class
+// Class consts
 const titleClass = "title style-scope ytd-video-primary-info-renderer"
+
+// Find title
 function getVideoTitle() {
   return document.getElementsByClassName(titleClass)[0].innerText;
 }
 
-// Handle response from background script
-// TODO: Handle rendering of lyrics here
-function handleResponse(message) {
-  console.log(`Message from the background script:  ${message.response}`);
-}
 
-// Handle errors from background script
-function handleError(error) {
-  console.log(`Error: ${error}`);
-}
-
-// Listen for messages from background script
+//
+// Listen for messages from background script, as only it polls for when a new video is played
+// 
 browser.runtime.onMessage.addListener(message => {
-  // Check if video changed based API's available to only background script
+  // Check if video changed
   if (message.videoChanged) {
     console.log("Video changed")
-    // Need to wait for title to update TODO: Replace the wait with something smarter
+    // Need to wait for title to update 
+    // TODO: Replace the wait with something smarter
     setTimeout(() => {
-      // Send title background script
-      var sending = browser.runtime.sendMessage({
+      // Send video information back to backgroundscript
+      browser.runtime.sendMessage({
         title: getVideoTitle()
       });
-      // Handle response and error
-      sending.then(handleResponse, handleError);  
     }, 1500);
   }
 });
