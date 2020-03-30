@@ -6,10 +6,15 @@
   "description": "Get lyrics for current YouTube video",
 
   "permissions": [
-    "webNavigation"
+    "webNavigation", "tabs", "activeTab"
   ],
   "background": {
     "scripts": ["background.js"]
+  },
+  "browser_action": {
+    "default_icon": "icons/beasts-32.png",
+    "default_title": "Lyricly",
+    "default_popup": "popup/popup.html"
   },
   "content_scripts": [
     {
