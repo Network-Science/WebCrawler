@@ -27,23 +27,36 @@ function crawling() {
     })
     .then(data => {
       console.log('This is crawled html in string', data);
-      // let domparser = new DOMParser()​​
-      // let doc = domparser.parseFromString(data, "text/html")
-      console.log('Type of doc', typeof doc);
+      console.log('Type of data', typeof data);
+      return data;
+    })
+    .then(string => {
+      let domparser = new DOMParser();
+      let doc = domparser.parseFromString(string, 'text/html');
+      console.log('type of doc', typeof doc);
+      console.log('this is doc', doc);
       return doc;
     });
 }
 
+function getCrawling() {
+  return Promise.resolve(crawling());
+}
+
 let lyrics;
+let result;
 function setLyrics(title) {
-  // crawling();
-  lyrics = title + ' | Blah Blah Blah';
+  getCrawling()
+    .then(res => (result = res))
+    .then(() => {
+      console.log('this is result', result);
+      lyrics = title + ' | Blah Blah Blah';
+    });
 }
 
 // Listen to message from content script for YouTube video details
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Message from the content script: ' + request.title);
-  console.log('This is lyrics doc parsed', crawling());
   setLyrics(request.title);
 });
 
