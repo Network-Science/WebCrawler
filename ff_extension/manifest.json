@@ -5,9 +5,7 @@
 
   "description": "Get lyrics for current YouTube video",
 
-  "permissions": [
-    "webNavigation", "tabs", "activeTab"
-  ],
+  "permissions": ["webNavigation", "tabs", "activeTab", "<all_urls>"],
   "background": {
     "scripts": ["background.js"]
   },
