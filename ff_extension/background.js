@@ -35,9 +35,23 @@ function crawling() {
       let doc = domparser.parseFromString(string, 'text/html');
       console.log('type of doc', typeof doc);
       console.log('this is doc', doc);
+
+      let refs = doc.querySelectorAll('a[href^="http"]');
+      console.log(refs);
+      let links = [];
+      refs.forEach(tag => {
+        links.push(tag.getAttribute('href'));
+      })
+      console.log(links);
+
+      //calculate relevancy somehow
+      links.forEach(link => {
+        
+      })
       return doc;
     });
 }
+
 
 function getCrawling() {
   return Promise.resolve(crawling());
