@@ -18,9 +18,10 @@ browser.webNavigation.onHistoryStateUpdated.addListener(
 // Receive video information from content script to fetch relevant lyrics
 //
 // TODO: Add crawler here to get lyrics
-function crawling() {
+function crawling(title) {
+  console.log('Title is ', title);
   fetch(
-    'https://www.google.com/search?q=take+me+home+country+road+lyrics&rlz=1C5CHFA_enUS870US870&oq=take+me&aqs=chrome.0.69i59l2j69i57j69i60.1837j0j7&sourceid=chrome&ie=UTF-8'
+    'https://www.azlyrics.com/'
   )
     .then(response => {
       return response.text();
@@ -36,7 +37,7 @@ function crawling() {
       console.log('type of doc', typeof doc);
       console.log('this is doc', doc);
 
-      let refs = doc.querySelectorAll('a[href^="http"]');
+      let refs = doc.querySelectorAll('a[href^="http"], a[href^="//www"], a[href^="www"]');
       console.log(refs);
       let links = [];
       refs.forEach(tag => {
@@ -46,21 +47,51 @@ function crawling() {
 
       //calculate relevancy somehow
       links.forEach(link => {
-        
+        console.log(link);
+        if(!/^(f|ht)tps?:\/\//i.test(link)){
+          link = `http://` + link;
+        }
+
+        fetch(link)
+        .then(response => {
+          return response.text();
+        })
+        .then(data => {
+          
+          return data;
+        })
+        .then(string => {
+          let parser = new DOMParser();
+          let doc = parser.parseFromString(string, 'text/html');
+
+          let everything = doc.querySelectorAll('body :not(style):not(script):not(section):not(nav):not(#cst)');
+          //let everything = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, a, b, div')
+          console.log(everything);
+
+          let text = []
+          everything.forEach(element => {
+            if(element.textContent != "")
+              text.push(element.innerText);
+          });
+          //output is still not that clean, but I don't think i can do any better
+          console.log(text);
+
+          //compare text to keywords?
+        })
       })
       return doc;
     });
 }
 
 
-function getCrawling() {
-  return Promise.resolve(crawling());
+function getCrawling(title) {
+  return Promise.resolve(crawling(title));
 }
 
 let lyrics;
 let result;
 function setLyrics(title) {
-  getCrawling()
+  getCrawling(title)
     .then(res => (result = res))
     .then(() => {
       console.log('this is result', result);
