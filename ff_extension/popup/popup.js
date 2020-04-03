@@ -12,5 +12,6 @@ port.postMessage({ready: true});
 port.onMessage.addListener(function(m) {
   console.log("Recieved lyrics")
   // Set html paragraph to contain lyrics
+  document.getElementById("title").innerHTML = m.title;
   document.getElementById("lyrics").innerHTML = m.lyrics;
 });

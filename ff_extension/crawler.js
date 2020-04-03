@@ -1,21 +1,21 @@
-crawlUrl = function(url) {
-  fetch(url)
+crawlUrl = async function(url) {
+  const result = await fetch(url)
     .then(response => {
+      console.log('url', url);
       return response.text();
     })
     .then(data => {
-      console.log('this is string response.text()', data);
       let domparser = new DOMParser();
       let doc = domparser.parseFromString(data, 'text/html');
-      console.log('type of doc', typeof doc);
-      console.log('this is doc', doc);
       return doc;
     });
+  return result;
 };
 
 google = function(song) {
   let url = 'https://www.google.com/search?q=';
   url += song;
+  url += '+azlyrics';
   return url;
 };
 
