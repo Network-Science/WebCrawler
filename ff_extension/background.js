@@ -18,40 +18,23 @@ browser.webNavigation.onHistoryStateUpdated.addListener(
 // Receive video information from content script to fetch relevant lyrics
 //
 // TODO: Add crawler here to get lyrics
-function crawling() {
-  fetch(
-    'https://www.google.com/search?q=take+me+home+country+road+lyrics&rlz=1C5CHFA_enUS870US870&oq=take+me&aqs=chrome.0.69i59l2j69i57j69i60.1837j0j7&sourceid=chrome&ie=UTF-8'
-  )
-    .then(response => {
-      return response.text();
-    })
-    .then(data => {
-      console.log('This is crawled html in string', data);
-      console.log('Type of data', typeof data);
-      return data;
-    })
-    .then(string => {
-      let domparser = new DOMParser();
-      let doc = domparser.parseFromString(string, 'text/html');
-      console.log('type of doc', typeof doc);
-      console.log('this is doc', doc);
-      return doc;
-    });
-}
 
-function getCrawling() {
-  return Promise.resolve(crawling());
+function getCrawling(url) {
+  return Promise.resolve(crawlUrl(url));
 }
 
 let lyrics;
 let result;
+
 function setLyrics(title) {
-  getCrawling()
-    .then(res => (result = res))
-    .then(() => {
-      console.log('this is result', result);
-      lyrics = title + ' | Blah Blah Blah';
-    });
+  let converted = convertLyrics(title);
+  console.log('Converted', converted);
+  let googleUrl = google(converted);
+  console.log('google', googleUrl);
+  getCrawling(googleUrl).then(res => {
+    result = res;
+    lyrics = title + ' | Blah Blah Blah';
+  });
 }
 
 // Listen to message from content script for YouTube video details
