@@ -23,45 +23,40 @@ let title = '';
 let lyrics = '';
 
 function setLyrics(songTitle) {
+  // convert title in a string format we can put in as a url
   let converted = convertLyrics(songTitle);
   let googleUrl = google(converted);
-  // let crawledElement = crawlUrl(googleUrl);
-  // console.log('type of crawled', typeof crawledElement);
-  // console.log('crawledElement', crawledElement);
-  // var x = crawledElement.getElementByClassName('PZPZlf');
-  // lyrics = title + ' | Blah Blah Blah';
-  //////
+  // run google results and extract hrefs
   crawlUrl(googleUrl).then(doc => {
-    // let temp = res.body.innerHTML;
-    // let domparser = new DOMParser();
-    // let doc = domparser.parseFromString(temp, 'text/html');
     let refs = doc.querySelectorAll(
       'a[href^="http"], a[href^="//www"], a[href^="www"]'
     );
-    let temp = '';
-    console.log('Refs', refs, typeof refs);
+    let azUrl = '';
     for (let i = 0; i < refs.length; i++) {
-      // console.log('ref i', refs[i].href);
+      // check if hrefs string is azlyrics, I only store the first one found currently
       if (refs[i].href.includes('https://www.azlyrics.com/lyrics')) {
-        temp = refs[i].href;
+        azUrl = refs[i].href;
         break;
       }
     }
-    if (temp !== '') {
-      crawlUrl(temp)
+    // if we found search results
+    if (azUrl !== '') {
+      // crawl to azlyrics website url
+      crawlUrl(azUrl)
         .then(doc => {
-          console.log('Temp doc', doc);
-          var x = doc.getElementsByClassName('col-xs-12 col-lg-8 text-center');
-          console.log('Grabbing by class name', x);
-          console.log('lyrics?', x[0].children[7].innerText);
-          actualLyrics = x[0].children[7].innerText;
+          // this part relies heavily on the html structure of the website
+          // so far they all have same format
+          let x = doc.getElementsByClassName('col-xs-12 col-lg-8 text-center');
+          //// console.log('Grabbing by class name', x);
+          //// console.log('lyrics?', x[0].children[7].innerText);
+          let crawledLyrics = x[0].children[7].innerText;
+          return crawledLyrics;
         })
-        .then(() => {
+        .then(crawledLyrics => {
           title = songTitle + '\n\n';
-          lyrics = actualLyrics;
+          lyrics = crawledLyrics;
         });
     }
-    // console.log('hello from the other side');
     // lyrics = title + ' | Blah Blah Blah';
   });
 }

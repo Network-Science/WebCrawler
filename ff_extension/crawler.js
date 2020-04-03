@@ -1,7 +1,8 @@
+// returns the fetch result of URL in document object
 crawlUrl = async function(url) {
   const result = await fetch(url)
     .then(response => {
-      console.log('url', url);
+      // console.log('url', url);
       return response.text();
     })
     .then(data => {
@@ -12,6 +13,7 @@ crawlUrl = async function(url) {
   return result;
 };
 
+// add google search parameter
 google = function(song) {
   let url = 'https://www.google.com/search?q=';
   url += song;
@@ -19,6 +21,7 @@ google = function(song) {
   return url;
 };
 
+// change white space of a string to '+' to allow inserting the value into the url
 convertLyrics = function(title) {
   let converted = '';
   for (let i = 0; i < title.length; i++) {
