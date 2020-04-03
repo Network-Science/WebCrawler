@@ -16,76 +16,132 @@ browser.webNavigation.onHistoryStateUpdated.addListener(
 
 //
 // Receive video information from content script to fetch relevant lyrics
-//
-// TODO: Add crawler here to get lyrics
-function crawling(title) {
+
+function AStar(title){
+
+  //return as promise later
   console.log('Title is ', title);
-  fetch(
-    'https://www.azlyrics.com/'
+  newTitle = title.replace(/[^A-Za-z0-9]/g, ' ').trim();
+  console.log('New title is', newTitle);
+  var tokens = newTitle.split(/[ ,]+/);
+  console.log(tokens);
+
+  let frontier = [{link:'https://www.azlyrics.com/', score: -1}]
+
+  while(frontier.length != 0) {
+    //last object in the list should have highest relevancy
+    //the frontier list is like a priority queue, we examine the link with highest priority
+    let obj = frontier.pop();
+    console.log("Goddamit");
+
+    let linkPromise = crawling(obj.link);
+    linkPromise.then(links => {
+      console.log("Links gotten!");
+      console.log(links);
+
+      //processLinks calculates relevancy scores
+      //newScores returns an array of objects of the form {link: blah, score: blah}
+      let newScores = processLinks(links, tokens);
+
+      console.log(newScores);
+      //frontier.concat(newScores);
+      return newScores;
+    });
+
+    //sort frontier by relevancy score property, in ascending order. Highest value last
+
+    //repeat until relevancy match found (need to define expected relevancy of match)
+   
+  }
+}
+
+function crawling(link) {
+  return(fetch(
+    link
   )
     .then(response => {
       return response.text();
     })
     .then(data => {
-      console.log('This is crawled html in string', data);
-      console.log('Type of data', typeof data);
       return data;
     })
     .then(string => {
+      let links = [];
       let domparser = new DOMParser();
       let doc = domparser.parseFromString(string, 'text/html');
-      console.log('type of doc', typeof doc);
-      console.log('this is doc', doc);
 
       let refs = doc.querySelectorAll('a[href^="http"], a[href^="//www"], a[href^="www"]');
-      console.log(refs);
-      let links = [];
+      
       refs.forEach(tag => {
         links.push(tag.getAttribute('href'));
       })
-      console.log(links);
+      return links;  
+    }));
 
-      //calculate relevancy somehow
-      links.forEach(link => {
-        console.log(link);
-        if(!/^(f|ht)tps?:\/\//i.test(link)){
-          link = `http://` + link;
-        }
-
-        fetch(link)
-        .then(response => {
-          return response.text();
-        })
-        .then(data => {
-          
-          return data;
-        })
-        .then(string => {
-          let parser = new DOMParser();
-          let doc = parser.parseFromString(string, 'text/html');
-
-          let everything = doc.querySelectorAll('body :not(style):not(script):not(section):not(nav):not(#cst)');
-          //let everything = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, a, b, div')
-          console.log(everything);
-
-          let text = []
-          everything.forEach(element => {
-            if(element.textContent != "")
-              text.push(element.innerText);
-          });
-          //output is still not that clean, but I don't think i can do any better
-          console.log(text);
-
-          //compare text to keywords?
-        })
-      })
-      return doc;
-    });
+    
 }
 
+function processLinks(links, tokens){
+  let linkScores = []
+  links.forEach(link => {
+    //console.log(link);
+    if(!/^(f|ht)tps?:\/\//i.test(link)){
+      link = `http://` + link;
+    }
+
+    fetch(link)
+    .then(response => {
+      return response.text();
+    })
+    .then(data => {    
+      return data;
+    })
+    .then(string => {
+      let parser = new DOMParser();
+      let doc = parser.parseFromString(string, 'text/html');
+
+      let everything = doc.querySelectorAll('body :not(style):not(script):not(section):not(nav):not(#cst)');
+      //let everything = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, a, b, div')
+      //console.log(everything);
+
+      let text = []
+      everything.forEach(element => {
+        if(element.textContent != "")
+          text.push(element.innerText);
+      });
+      //output is still not that clean, but I don't think i can do any better
+      //console.log(text);
+      let relevancy = calcRelevancy(tokens, text);
+
+      //records link along with its relevancy score
+      linkScores.push({link:link, score: relevancy})
+    })
+  });
+  //console.log(linkScores);
+  return linkScores;
+}
+
+//TODO : get this shit actually working
+function calcRelevancy(title, text) {
+  //title is an array of words
+  let totalRelevancy = 0;
+  for(let i = 0; i < text.length; i++){
+    let score = 0;
+
+    for(let j = 0; j < title.length; j++){
+      if(text[i].includes(title[j])){
+        score++;
+      }
+    }
+    //should try to penalize score if words aren't next to each other
+    totalRelevancy+= score/title.length
+    //should also factor in text size too?
+  }
+  return totalRelevancy;
+}
 
 function getCrawling(title) {
-  return Promise.resolve(crawling(title));
+  return Promise.resolve(AStar(title));
 }
 
 let lyrics;
