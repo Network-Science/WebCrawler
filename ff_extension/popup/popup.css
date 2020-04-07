@@ -1,6 +1,26 @@
-#title{
-    color:green;
+#intro{
+        font-size: 30px;
 }
+
+#icon{
+    display:inline-block;margin-right:10px;
+}
+
+#name{
+    margin-top: 10px;
+    display:inline-block;
+    margin-right:120px;
+    margin-bottom: 0.5px;
+}
+
+#question{
+    display:inline-block
+}
+
+
+
+
+
 
 
 
