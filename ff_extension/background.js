@@ -19,14 +19,14 @@ browser.webNavigation.onHistoryStateUpdated.addListener(history => {
 //
 // TODO: Add crawler here to get lyrics
 let lyrics
-function setLyrics(title) {
-  lyrics = title + " | Blah Blah Blah"
+function setLyrics(songDetails) {
+  console.log("Details in setLyrics", songDetails)
+  lyrics = songDetails.artist + " " + songDetails.title + " | Blah Blah Blah"
 }
 
 // Listen to message from content script for YouTube video details
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Message from the content script: " + request.title);
-  setLyrics(request.title)
+  setLyrics(request)
 });
 
 
