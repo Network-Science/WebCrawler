@@ -1,5 +1,6 @@
 // returns the fetch result of URL in document object
 crawlUrl = async function(url) {
+  console.log(url)
   const result = await fetch(url)
     .then(response => {
       // console.log('url', url);
@@ -10,14 +11,39 @@ crawlUrl = async function(url) {
       let doc = domparser.parseFromString(data, 'text/html');
       return doc;
     });
+  return JSON.stringify(DOMtoJSON(result.body), null, ' ');
+  //return result;
+};
+
+
+
+//converts DOM object to JSON
+DOMtoJSON = function(element) {
+  let result = {};
+  console.log("Hi");
+  result.name = element.localName;
+  result.attributes = [];
+  result.children = [];
+  Array.from(element.attributes).forEach(a => {
+    result.attributes.push({name: a.name, value: a.value});
+  });
+  Array.from(element.children).forEach(c => {
+    result.children.push(DOMtoJSON(c));
+  });
+  //console.log(result)
   return result;
 };
+
+JSONSearchForLinks = function(doc) {
+  let links = []
+  
+}
 
 // add google search parameter
 google = function(song) {
   let url = 'https://www.google.com/search?q=';
   url += song;
-  url += '+azlyrics';
+  //url += '+azlyrics';
   return url;
 };
 

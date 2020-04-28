@@ -26,19 +26,50 @@ function setLyrics(songTitle) {
   // convert title in a string format we can put in as a url
   let converted = convertLyrics(songTitle);
   let googleUrl = google(converted);
-  // run google results and extract hrefs
+  console.log(googleUrl)
+
+  // run google results and extract hrefs from search page
+  // *************doc is JSON right now, modified crawlURL's return value
   crawlUrl(googleUrl).then(doc => {
-    let refs = doc.querySelectorAll(
+    // TODO : have refs equal the result of traversing the JSON since we can't use querySelector
+    /*let refs = Array.from(doc.querySelectorAll(
       'a[href^="http"], a[href^="//www"], a[href^="www"]'
-    );
-    let azUrl = '';
-    for (let i = 0; i < refs.length; i++) {
-      // check if hrefs string is azlyrics, I only store the first one found currently
-      if (refs[i].href.includes('https://www.azlyrics.com/lyrics')) {
-        azUrl = refs[i].href;
-        break;
-      }
+    ));*/
+    
+    // TODO : make multiple workers?
+    var worker = new Worker('worker.js');
+
+    worker.onmessage = function(e) {
+      let newLinks = e.data;
+      console.log(newLinks);
+      //refs = refs.concat(newLinks)
     }
+
+    worker.postMessage(doc)
+    let visited = []
+
+    // TODO: Rewrite this loop for JSON
+    // refs is sort of treated like a queue here with shift() and concat() in the worker.onmessage
+    /*let counter = 0 // counter is to just break the while loop early
+    while(refs && refs.length && counter != 10) {
+      let link = refs[0].href
+      if(!/^(f|ht)tps?:\/\//i.test(link)){
+        link = `http://` + link;
+      }
+      if(!visited.includes(link)){
+        crawlUrl(link).then(doc => {
+          console.log("New link sent to worker");
+          console.log(link);
+          worker.postMessage(doc);
+        })
+        visited.push(link);
+        refs.shift();
+        counter++;
+        
+      }
+      break;
+    }*/
+    
     // if we found search results
     if (azUrl !== '') {
       // crawl to azlyrics website url
@@ -58,6 +89,8 @@ function setLyrics(songTitle) {
         });
     }
     // lyrics = title + ' | Blah Blah Blah';
+    title = "gee"
+    lyrics = "gee"
   });
 }
 
