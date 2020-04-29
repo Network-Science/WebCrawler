@@ -7,12 +7,13 @@ crawlUrl = async function(url) {
       return response.text();
     })
     .then(data => {
+      console.log(data)
       let domparser = new DOMParser();
       let doc = domparser.parseFromString(data, 'text/html');
       return doc;
     });
-  return JSON.stringify(DOMtoJSON(result.body), null, ' ');
-  //return result;
+  //return JSON.stringify(DOMtoJSON(result.body), null, ' ');
+  return result;
 };
 
 

@@ -1,3 +1,30 @@
+import {Comlink} from './node_modules/comlinkjs/comlink.es6.js';
+
+const w = new Worker('./node_modules/comlink-fetch/src/fetch.worker.js');
+
+const proxy = Comlink.proxy(w);
+
+//wrapper function to let worker thread "fetch"
+async function test(link) {
+  const API = await new proxy.Fetch;
+
+  API.setBaseUrl(link);
+  API.setDefaultHeaders('Content-Type', 'text/html')
+  let please = API.get('');
+  please.then(data => {
+    //console.log(response);
+    let domparser = new DOMParser();
+    let doc = domparser.parseFromString(data, 'text/html');
+    console.log(doc)
+    let refs = Array.from(doc.querySelectorAll(
+      'a[href^="http"], a[href^="//www"], a[href^="www"]'
+    ));
+    console.log(refs)
+
+  })
+  console.log("Work")
+}
+
 //
 // Watch browser history to determine if a YouTube video is being watched
 //
@@ -29,26 +56,18 @@ function setLyrics(songTitle) {
   console.log(googleUrl)
 
   // run google results and extract hrefs from search page
-  // *************doc is JSON right now, modified crawlURL's return value
   crawlUrl(googleUrl).then(doc => {
-    // TODO : have refs equal the result of traversing the JSON since we can't use querySelector
-    /*let refs = Array.from(doc.querySelectorAll(
+    let refs = Array.from(doc.querySelectorAll(
       'a[href^="http"], a[href^="//www"], a[href^="www"]'
-    ));*/
-    
+    ));
+  
     // TODO : make multiple workers?
-    var worker = new Worker('worker.js');
+    //test worker thread that's a proxy
+    test(googleUrl);
 
-    worker.onmessage = function(e) {
-      let newLinks = e.data;
-      console.log(newLinks);
-      //refs = refs.concat(newLinks)
-    }
-
-    worker.postMessage(doc)
     let visited = []
 
-    // TODO: Rewrite this loop for JSON
+    // TODO: Rewrite this loop for Comlink?
     // refs is sort of treated like a queue here with shift() and concat() in the worker.onmessage
     /*let counter = 0 // counter is to just break the while loop early
     while(refs && refs.length && counter != 10) {
@@ -71,7 +90,7 @@ function setLyrics(songTitle) {
     }*/
     
     // if we found search results
-    if (azUrl !== '') {
+    /*if (azUrl !== '') {
       // crawl to azlyrics website url
       crawlUrl(azUrl)
         .then(doc => {
@@ -87,7 +106,7 @@ function setLyrics(songTitle) {
           title = songTitle + '\n\n';
           lyrics = crawledLyrics;
         });
-    }
+    }*/
     // lyrics = title + ' | Blah Blah Blah';
     title = "gee"
     lyrics = "gee"

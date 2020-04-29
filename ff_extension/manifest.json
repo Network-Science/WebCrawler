@@ -7,7 +7,7 @@
 
   "permissions": ["webNavigation", "tabs", "activeTab", "<all_urls>"],
   "background": {
-    "scripts": ["background.js", "crawler.js"]
+    "scripts": ["bundle.js", "crawler.js"]
   },
   
   "web_accessible_resources": [
