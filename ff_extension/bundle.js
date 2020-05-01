@@ -330,33 +330,45 @@
     const w = new Worker('./node_modules/comlink-fetch/src/fetch.worker.js');
 
     const proxy = Comlink.proxy(w);
+    const lyricsFromWorkers = [];
 
-    //wrapper function to let worker thread "fetch"
+    // Wrapper function to let worker thread "fetch"
     async function test(link) {
-      const API = await new proxy.Fetch;
-
+      const API = await new proxy.Fetch();
       API.setBaseUrl(link);
       API.setDefaultHeaders('Content-Type', 'text/html');
-      let please = API.get('');
-      please.then(data => {
-        //console.log(response);
-        let domparser = new DOMParser();
-        let doc = domparser.parseFromString(data, 'text/html');
-        console.log(doc);
-        let refs = Array.from(doc.querySelectorAll(
-          'a[href^="http"], a[href^="//www"], a[href^="www"]'
-        ));
-        console.log(refs);
 
-      });
-      console.log("Work");
+      let please = API.get('');
+      please
+        .then((data) => {
+          //
+          let domparser = new DOMParser();
+          let doc = domparser.parseFromString(data, 'text/html');
+          return doc;
+        })
+        .then((doc) => {
+          let result;
+          if (link.toLowerCase().includes('azlyrics')) {
+            result = azLyrics(doc);
+          } else if (link.toLowerCase().includes('genius')) {
+            result = geniusLyrics(doc);
+          }
+          return result;
+        })
+        .then((result) => {
+          if (result !== undefined && result !== false) {
+            console.log('third call back', link);
+            lyricsFromWorkers.push(result);
+            console.log('lyricsFromWorkers', lyricsFromWorkers);
+          }
+        });
     }
 
     //
     // Watch browser history to determine if a YouTube video is being watched
     //
     browser.webNavigation.onHistoryStateUpdated.addListener(
-      history => {
+      (history) => {
         const url = new URL(history.url);
         if (!url.searchParams.get('v')) {
           // Not a video
@@ -379,18 +391,48 @@
     function setLyrics(songTitle) {
       // convert title in a string format we can put in as a url
       let converted = convertLyrics(songTitle);
+      converted += '+lyrics';
       let googleUrl = google(converted);
-      console.log(googleUrl);
 
       // run google results and extract hrefs from search page
-      crawlUrl(googleUrl).then(doc => {
-        let refs = Array.from(doc.querySelectorAll(
-          'a[href^="http"], a[href^="//www"], a[href^="www"]'
-        ));
-      
+      crawlUrl(googleUrl).then((doc) => {
+        let refs = Array.from(
+          doc.querySelectorAll('a[href^="http"], a[href^="//www"], a[href^="www"]')
+        );
+
+        const visited = [];
+        // Filter hrefs on whehter hrefs contain the word "azlyrics", "genius"
+        for (let i = 0; i < refs.length; i++) {
+          const temp = refs[i].href.toLowerCase();
+          if (temp.includes('azlyrics') || temp.includes('genius')) {
+            visited.push(refs[i].href);
+          }
+        }
+        console.log('visited after trying to include method', visited);
+        console.log(
+          'lyricsFromWorkers <-- guessing empty due to async',
+          lyricsFromWorkers
+        );
+        Promise.all(
+          visited.map((link) => {
+            console.log('inside map link', link);
+            test(link);
+          })
+        ).then(() => {
+          console.log('lyricsFromWorkers <-- after Promise all', lyricsFromWorkers);
+        });
+
+        // for (let i = 0; i < visited.length; i++) {
+        //   try {
+        //     test(visited[i]);
+        //   } catch {
+        //     continue;
+        //   }
+        // }
+
         // TODO : make multiple workers?
         //test worker thread that's a proxy
-        test(googleUrl);
+        // test(googleUrl);
 
         // TODO: Rewrite this loop for Comlink?
         // refs is sort of treated like a queue here with shift() and concat() in the worker.onmessage
@@ -413,7 +455,7 @@
           }
           break;
         }*/
-        
+
         // if we found search results
         /*if (azUrl !== '') {
           // crawl to azlyrics website url
@@ -433,22 +475,23 @@
             });
         }*/
         // lyrics = title + ' | Blah Blah Blah';
-        title = "gee";
-        lyrics = "gee";
+
+        title = 'gee';
+        lyrics = 'gee';
       });
     }
 
     // Listen to message from content script for YouTube video details
     browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log('Message from the content script: ' + request.title);
-      setLyrics(request.title);
+      setLyrics(request.title + ' ' + request.artist);
     });
 
     //
     // Listen to popup being opened and forward current lyrics
     //
-    browser.runtime.onConnect.addListener(port => {
-      port.onMessage.addListener(function(m) {
+    browser.runtime.onConnect.addListener((port) => {
+      port.onMessage.addListener(function (m) {
         console.log('Got connection from popup');
         // If port is ready, respond with lyrics
         if (m.ready) {
