@@ -7,7 +7,7 @@
 
   "permissions": ["webNavigation", "tabs", "activeTab", "<all_urls>"],
   "background": {
-    "scripts": ["bundle.js", "crawler.js"]
+    "scripts": ["bundle.js", "./package/crawler.js"]
   },
 
   "web_accessible_resources": ["icons/beasts-32.png"],

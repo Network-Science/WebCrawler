@@ -1,9 +1,12 @@
 import { Comlink } from './node_modules/comlinkjs/comlink.es6.js';
 
 const w = new Worker('./node_modules/comlink-fetch/src/fetch.worker.js');
-
 const proxy = Comlink.proxy(w);
-const lyricsFromWorkers = [];
+let title = '';
+let lyrics = '';
+let lyricsFromWorkers = []; // lyricsFromWorkers contain crawled lyrics from each worker
+
+// In Progress: Add crawler here to get lyrics "async function test" & "function setLyrics"
 
 // Wrapper function to let worker thread "fetch"
 async function test(link) {
@@ -14,11 +17,13 @@ async function test(link) {
   let please = API.get('');
   please
     .then((data) => {
+      // returns the fetch result of link in document object
       let domparser = new DOMParser();
       let doc = domparser.parseFromString(data, 'text/html');
       return doc;
     })
     .then((doc) => {
+      // traverse the document object depending on the link type
       let result;
       if (link.toLowerCase().includes('azlyrics')) {
         result = azLyrics(doc);
@@ -26,6 +31,8 @@ async function test(link) {
         result = geniusLyrics(doc);
       } else if (link.toLowerCase().includes('metrolyrics')) {
         result = metroLyrics(doc);
+      } else {
+        result = false;
       }
       return result;
     })
@@ -36,30 +43,7 @@ async function test(link) {
     });
 }
 
-//
-// Watch browser history to determine if a YouTube video is being watched
-//
-browser.webNavigation.onHistoryStateUpdated.addListener(
-  (history) => {
-    const url = new URL(history.url);
-    if (!url.searchParams.get('v')) {
-      // Not a video
-      return;
-    }
-    // Send message to content script telling it a new video is being played
-    browser.tabs.sendMessage(history.tabId, { videoChanged: true });
-  },
-  { url: [{ urlMatches: '^https://www.youtube.com/watch?' }] }
-);
-
-//
-// Receive video information from content script to fetch relevant lyrics
-//
-// TODO: Add crawler here to get lyrics
-
-let title = '';
-let lyrics = '';
-
+// Main Function to start crawling workers
 function setLyrics(songTitle) {
   // convert title in a string format we can put in as a url
   let converted = convertLyrics(songTitle);
@@ -73,7 +57,7 @@ function setLyrics(songTitle) {
     );
 
     const visited = [];
-    // Filter hrefs on whehter hrefs contain the word "azlyrics", "genius"
+    // Filter hrefs on whehter hrefs contain the word "azlyrics", "genius", "metrolyrics"
     for (let i = 0; i < refs.length; i++) {
       const temp = refs[i].href.toLowerCase();
       if (
@@ -84,26 +68,37 @@ function setLyrics(songTitle) {
         visited.push(refs[i].href);
       }
     }
-    console.log('visited after trying to include method', visited);
+
+    console.log('visited after trying to filter', visited);
+    lyricsFromWorkers = [];
 
     console.log(
       'lyricsFromWorkers <-- before promise.all should be empty ',
       lyricsFromWorkers.slice()
     );
+
+    // Set lyricsFromWorkers empty to clear the previous lyric results;
+
+    /* Promise.all 
+    Start multiple workers in "parallel"  using Promise.all
+    The parallelism appralletly depends on the host's CPU 
+    Reference: https://anotherdev.xyz/promise-all-runs-in-parallel/ */
     Promise.all(
       visited.map((link) => {
         test(link);
       })
     ).then(() => {
-      console.log('lyricsFromWorkers <-- after Promise all', lyricsFromWorkers);
+      console.log(
+        'lyricsFromWorkers <-- after Promise all, should contain all workers results',
+        lyricsFromWorkers
+      );
+      return;
     });
 
     console.log(
       'OUTSIDE ASYNC lyricsFromWorkers <-- should be empty due to async',
       lyricsFromWorkers.slice()
     );
-
-    
 
     // TODO : make multiple workers?
     //test worker thread that's a proxy
@@ -155,6 +150,23 @@ function setLyrics(songTitle) {
     lyrics = 'gee';
   });
 }
+
+//
+// Receive video information from content script to fetch relevant lyrics
+// Watch browser history to determine if a YouTube video is being watched
+//
+browser.webNavigation.onHistoryStateUpdated.addListener(
+  (history) => {
+    const url = new URL(history.url);
+    if (!url.searchParams.get('v')) {
+      // Not a video
+      return;
+    }
+    // Send message to content script telling it a new video is being played
+    browser.tabs.sendMessage(history.tabId, { videoChanged: true });
+  },
+  { url: [{ urlMatches: '^https://www.youtube.com/watch?' }] }
+);
 
 // Listen to message from content script for YouTube video details
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {

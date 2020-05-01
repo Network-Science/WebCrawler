@@ -19,6 +19,7 @@ geniusLyrics = function (doc) {
     let content = pTag[0].innerText;
     return content;
   } catch {
+    // if any error in try, return false
     return false;
   }
 };
@@ -30,6 +31,7 @@ azLyrics = function (doc) {
     let crawledLyrics = x[0].children[7].innerText;
     return crawledLyrics;
   } catch {
+    // if any error in try, return false
     return false;
   }
 };
@@ -41,6 +43,7 @@ lyricsCom = function (doc) {
     let text = element.innerText;
     return text;
   } catch {
+    // if any error in try, return false
     return false;
   }
 };
@@ -52,6 +55,7 @@ metroLyrics = function (doc) {
     let text = element.innerText;
     return text;
   } catch {
+    // if any error in try, return false
     return false;
   }
 };
