@@ -2,7 +2,6 @@
 crawlUrl = async function (url) {
   const result = await fetch(url)
     .then((response) => {
-      // console.log('url', url);
       return response.text();
     })
     .then((data) => {
@@ -13,52 +12,49 @@ crawlUrl = async function (url) {
   return result;
 };
 
+// crawling for geniusLyrics website
 geniusLyrics = function (doc) {
   try {
     let pTag = doc.getElementsByTagName('p');
-    let num = pTag.length;
-    console.log('pTag', pTag, 'num', num);
-    let content;
-    if (num >= 0) {
-      content = pTag[0].innerText;
-      console.log('geniusLyrics');
-    }
+    let content = pTag[0].innerText;
     return content;
   } catch {
     return false;
   }
 };
 
+// crwaling for azLyrics website
 azLyrics = function (doc) {
   try {
-    console.log('inside azLyrics', doc);
     let x = doc.getElementsByClassName('col-xs-12 col-lg-8 text-center');
     let crawledLyrics = x[0].children[7].innerText;
-    console.log('az rwaledLyrics');
     return crawledLyrics;
   } catch {
     return false;
   }
 };
 
-// if we found search results
-/*if (azUrl !== '') {
-      // crawl to azlyrics website url
-      crawlUrl(azUrl)
-        .then(doc => {
-          // this part relies heavily on the html structure of the website
-          // so far they all have same format
-          let x = doc.getElementsByClassName('col-xs-12 col-lg-8 text-center');
-          //// console.log('Grabbing by class name', x);
-          //// console.log('lyrics?', x[0].children[7].innerText);
-          let crawledLyrics = x[0].children[7].innerText;
-          return crawledLyrics;
-        })
-        .then(crawledLyrics => {
-          title = songTitle + '\n\n';
-          lyrics = crawledLyrics;
-        });
-    }*/
+// crwaling for lyrics.com website
+lyricsCom = function (doc) {
+  try {
+    let element = doc.getElementById('lyric-body-text');
+    let text = element.innerText;
+    return text;
+  } catch {
+    return false;
+  }
+};
+
+//crawling for meteorlyrics.com
+metroLyrics = function (doc) {
+  try {
+    let element = doc.getElementById('lyrics-body-text');
+    let text = element.innerText;
+    return text;
+  } catch {
+    return false;
+  }
+};
 
 //converts DOM object to JSON
 DOMtoJSON = function (element) {
@@ -83,10 +79,7 @@ JSONSearchForLinks = function (doc) {
 
 // add google search parameter
 google = function (song) {
-  let url = 'https://www.google.com/search?q=';
-  url += song;
-  //url += '+azlyrics';
-  return url;
+  return 'https://www.google.com/search?q=' + song;
 };
 
 // change white space of a string to '+' to allow inserting the value into the url

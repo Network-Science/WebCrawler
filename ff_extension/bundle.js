@@ -341,7 +341,6 @@
       let please = API.get('');
       please
         .then((data) => {
-          //
           let domparser = new DOMParser();
           let doc = domparser.parseFromString(data, 'text/html');
           return doc;
@@ -352,14 +351,14 @@
             result = azLyrics(doc);
           } else if (link.toLowerCase().includes('genius')) {
             result = geniusLyrics(doc);
+          } else if (link.toLowerCase().includes('metrolyrics')) {
+            result = metroLyrics(doc);
           }
           return result;
         })
         .then((result) => {
           if (result !== undefined && result !== false) {
-            console.log('third call back', link);
-            lyricsFromWorkers.push(result);
-            console.log('lyricsFromWorkers', lyricsFromWorkers);
+            return lyricsFromWorkers.push(result);
           }
         });
     }
@@ -404,31 +403,34 @@
         // Filter hrefs on whehter hrefs contain the word "azlyrics", "genius"
         for (let i = 0; i < refs.length; i++) {
           const temp = refs[i].href.toLowerCase();
-          if (temp.includes('azlyrics') || temp.includes('genius')) {
+          if (
+            temp.includes('azlyrics') ||
+            temp.includes('genius') ||
+            temp.includes('metrolyrics')
+          ) {
             visited.push(refs[i].href);
           }
         }
         console.log('visited after trying to include method', visited);
+
         console.log(
-          'lyricsFromWorkers <-- guessing empty due to async',
-          lyricsFromWorkers
+          'lyricsFromWorkers <-- before promise.all should be empty ',
+          lyricsFromWorkers.slice()
         );
         Promise.all(
           visited.map((link) => {
-            console.log('inside map link', link);
             test(link);
           })
         ).then(() => {
           console.log('lyricsFromWorkers <-- after Promise all', lyricsFromWorkers);
         });
 
-        // for (let i = 0; i < visited.length; i++) {
-        //   try {
-        //     test(visited[i]);
-        //   } catch {
-        //     continue;
-        //   }
-        // }
+        console.log(
+          'OUTSIDE ASYNC lyricsFromWorkers <-- should be empty due to async',
+          lyricsFromWorkers.slice()
+        );
+
+        
 
         // TODO : make multiple workers?
         //test worker thread that's a proxy
