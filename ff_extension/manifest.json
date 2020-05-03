@@ -9,15 +9,13 @@
   "background": {
     "scripts": ["bundle.js", "./package/crawler.js"]
   },
-
-  "web_accessible_resources": ["icons/beasts-32.png"],
-
+  
   "browser_action": {
-    "default_icon": "icons/beasts-32.png",
+    "default_icon": "icons/music-32.png",
     "default_title": "Lyricly",
     "default_popup": "popup/popup.html"
   },
-
+  
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],

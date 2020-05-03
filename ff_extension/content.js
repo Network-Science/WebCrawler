@@ -31,7 +31,7 @@ function getVideoTitle() {
   let vidTitle = document.getElementsByClassName(titleClass)[0].innerText;
   
   // Remove pesky quotes in title
-  vidTitle = vidTitle.replace("\"","")
+  vidTitle = vidTitle.replace(/\"/g, '')
   // Remove anything in quotes or brackets (This is usually something like (Official Music Video))
   vidTitle = removeAfterOccurences(vidTitle, ["(", "["])
 

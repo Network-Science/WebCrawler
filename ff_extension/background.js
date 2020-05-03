@@ -2,8 +2,11 @@ import { Comlink } from './node_modules/comlinkjs/comlink.es6.js';
 
 const w = new Worker('./node_modules/comlink-fetch/src/fetch.worker.js');
 const proxy = Comlink.proxy(w);
-let title = '';
-let lyrics = '';
+let song = {
+  artist: '',
+  title: '',
+  lyrics: '',
+}
 let lyricsFromWorkers = []; // lyricsFromWorkers contain crawled lyrics from each worker
 
 // In Progress: Add crawler here to get lyrics "async function test" & "function setLyrics"
@@ -44,9 +47,9 @@ async function test(link) {
 }
 
 // Main Function to start crawling workers
-function setLyrics(songTitle) {
+function setLyrics() {
   // convert title in a string format we can put in as a url
-  let converted = convertLyrics(songTitle);
+  let converted = convertLyrics(song.artist + ' ' + song.title);
   converted += '+lyrics';
   let googleUrl = google(converted);
 
@@ -146,8 +149,8 @@ function setLyrics(songTitle) {
     }*/
     // lyrics = title + ' | Blah Blah Blah';
 
-    title = 'gee';
-    lyrics = 'gee';
+    song.title = 'gee';
+    song.lyrics = 'gee';
   });
 }
 
@@ -170,19 +173,20 @@ browser.webNavigation.onHistoryStateUpdated.addListener(
 
 // Listen to message from content script for YouTube video details
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Message from the content script: ' + request.title);
-  setLyrics(request.title + ' ' + request.artist);
+  song.artist = request.artist
+  song.title = request.title
+  setLyrics();
 });
 
 //
 // Listen to popup being opened and forward current lyrics
 //
-browser.runtime.onConnect.addListener((port) => {
-  port.onMessage.addListener(function (m) {
+browser.runtime.onConnect.addListener(port => {
+  port.onMessage.addListener(function(m) {
     console.log('Got connection from popup');
     // If port is ready, respond with lyrics
     if (m.ready) {
-      port.postMessage({ title: title, lyrics: lyrics });
+      port.postMessage(song);
     }
   });
 });
