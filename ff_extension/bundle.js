@@ -380,6 +380,52 @@
       converted += '+lyrics';
       let googleUrl = google(converted);
 
+
+      /*
+      //Getting lyrics from seed site(s)
+      //example seed sites would be something like www.azlyrics.com
+      //***might have to put https in front links for them to be fetchable
+      //I think there's two ways we can parallelize, the actual search itself or having multiple crawlers in parallel
+      //I think regardless we don't use Bryan's promise.All() to accomplish this.
+
+      //I think you put all this code in a promise.All() call to have multiple crawlers working at once
+      //BFS 
+      crawlUrl(seedUrl).then((doc) => {
+          //links from the initial seed site page are here
+          //we iterate through these links
+          let refs = Array.from(
+          doc.querySelectorAll('a[href^="http"], a[href^="//www"], a[href^="www"]'));
+
+          //links we have already visited
+          const visited = [];
+
+          //while the refs array isn't empty keep looking at links, this should never be empty ideally
+          while(refs && refs.length) {
+                //look at first link of refs
+                let link = refs[0].href
+                
+                //if this particular link hasn't been visited before, fetch
+                if(!visited.includes(link)){
+
+                    fetchLink(link)
+                    
+                    //fetchLink needs some modifications probably:
+                    //if this page has the lyrics (look at the artist and song title element on page if it exists?), grab lyrics and break. 
+                    //otherwise get all hrefs from this link and add them to refs
+                    
+                    
+                    //link is marked as allready visited so we don't visited it again
+                    visited.push(link);
+                    
+                    //gets rid of first element in array since we finished visiting it already
+                    refs.shift();
+                    
+                }
+                break;
+            }
+        });
+      */
+
       // run google results and extract hrefs from search page
       crawlUrl(googleUrl).then((doc) => {
         //refs contains all anchor elements containing links reachable from this page.
