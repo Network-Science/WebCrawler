@@ -336,13 +336,13 @@
     // In Progress: Add crawler here to get lyrics "async function test" & "function setLyrics"
 
     // Wrapper function to let worker thread "fetch"
-    async function test(link) {
+    async function fetchLink(link) {
       const API = await new proxy.Fetch();
       API.setBaseUrl(link);
       API.setDefaultHeaders('Content-Type', 'text/html');
 
-      let please = API.get('');
-      please
+      let fetchPromise = API.get('');
+      fetchPromise
         .then((data) => {
           // returns the fetch result of link in document object
           let domparser = new DOMParser();
@@ -351,6 +351,7 @@
         })
         .then((doc) => {
           // traverse the document object depending on the link type
+          // see the relevant function in crawler.js
           let result;
           if (link.toLowerCase().includes('azlyrics')) {
             result = azLyrics(doc);
@@ -364,6 +365,8 @@
           return result;
         })
         .then((result) => {
+        
+          //returns lyrics fetched from the relevant page
           if (result !== undefined && result !== false) {
             return lyricsFromWorkers.push(result);
           }
@@ -379,9 +382,12 @@
 
       // run google results and extract hrefs from search page
       crawlUrl(googleUrl).then((doc) => {
+        //refs contains all anchor elements containing links reachable from this page.
         let refs = Array.from(
           doc.querySelectorAll('a[href^="http"], a[href^="//www"], a[href^="www"]')
         );
+
+        console.log(refs)
 
         const visited = [];
         // Filter hrefs on whehter hrefs contain the word "azlyrics", "genius", "metrolyrics"
@@ -412,7 +418,7 @@
         Reference: https://anotherdev.xyz/promise-all-runs-in-parallel/ */
         Promise.all(
           visited.map((link) => {
-            test(link);
+            fetchLink(link);
           })
         ).then(() => {
           console.log(
@@ -426,55 +432,7 @@
           'OUTSIDE ASYNC lyricsFromWorkers <-- should be empty due to async',
           lyricsFromWorkers.slice()
         );
-
-        // TODO : make multiple workers?
-        //test worker thread that's a proxy
-        // test(googleUrl);
-
-        // TODO: Rewrite this loop for Comlink?
-        // refs is sort of treated like a queue here with shift() and concat() in the worker.onmessage
-        /*let counter = 0 // counter is to just break the while loop early
-        while(refs && refs.length && counter != 10) {
-          let link = refs[0].href
-          if(!/^(f|ht)tps?:\/\//i.test(link)){
-            link = `http://` + link;
-          }
-          if(!visited.includes(link)){
-            crawlUrl(link).then(doc => {
-              console.log("New link sent to worker");
-              console.log(link);
-              worker.postMessage(doc);
-            })
-            visited.push(link);
-            refs.shift();
-            counter++;
-            
-          }
-          break;
-        }*/
-
-        // if we found search results
-        /*if (azUrl !== '') {
-          // crawl to azlyrics website url
-          crawlUrl(azUrl)
-            .then(doc => {
-              // this part relies heavily on the html structure of the website
-              // so far they all have same format
-              let x = doc.getElementsByClassName('col-xs-12 col-lg-8 text-center');
-              //// console.log('Grabbing by class name', x);
-              //// console.log('lyrics?', x[0].children[7].innerText);
-              let crawledLyrics = x[0].children[7].innerText;
-              return crawledLyrics;
-            })
-            .then(crawledLyrics => {
-              title = songTitle + '\n\n';
-              lyrics = crawledLyrics;
-            });
-        }*/
-        // lyrics = title + ' | Blah Blah Blah';
-
-        title = 'gee';
-        lyrics = 'gee';
+   
       });
     }
 
