@@ -15,11 +15,11 @@ port.postMessage({ready: true});
 port.onMessage.addListener(function(m) {
   console.log("Recieved lyrics")
   // Set html paragraph to contain lyrics
-  document.getElementById("artist").innerHTML = m.artist;
-  document.getElementById("title").innerHTML = m.title;
+  document.getElementById("artist").innerText = m.artist;
+  document.getElementById("title").innerText = m.title;
   if (m.lyrics == undefined) {
-    document.getElementById("lyrics").innerHTML = "No lyrics found";
+    document.getElementById("lyrics").innerText = "No lyrics found";
   } else {
-    document.getElementById("lyrics").innerHTML = m.lyrics;
+    document.getElementById("lyrics").innerText = m.lyrics;
   }
 });
