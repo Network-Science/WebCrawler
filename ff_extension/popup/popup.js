@@ -15,11 +15,25 @@ port.postMessage({ready: true});
 port.onMessage.addListener(function(m) {
   console.log("Recieved lyrics")
   // Set html paragraph to contain lyrics
-  document.getElementById("artist").innerHTML = m.artist;
-  document.getElementById("title").innerHTML = m.title;
-  if (m.lyrics == undefined) {
-    document.getElementById("lyrics").innerHTML = "No lyrics found";
-  } else {
-    document.getElementById("lyrics").innerHTML = m.lyrics;
+  document.getElementById("artist").innerText = m.artist;
+  document.getElementById("title").innerText = m.title;
+  let found = false
+  if (m.geniusLyrics !== '') {
+    document.getElementById("lyrics").innerText = m.geniusLyrics;
+    document.getElementById("provider").innerText = "Provided by Genius";
+    found = true 
+  }
+  if (m.azLyrics !== '' && !found) {
+    document.getElementById("lyrics").innerText = m.azLyrics;
+    document.getElementById("provider").innerText = "Provided by AZLyrics";
+    found = true 
+  }
+  if (m.absoluteLyrics !== '' && !found) {
+    document.getElementById("lyrics").innerText = m.absoluteLyrics;
+    document.getElementById("provider").innerText = "Provided by AbsoluteLyrics";
+    found = true 
+  }
+  if (!found) {
+    document.getElementById("lyrics").innerText = "No lyrics found";
   }
 });

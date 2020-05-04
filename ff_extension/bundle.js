@@ -327,160 +327,281 @@
         return { proxy, proxyValue, transferHandlers, expose };
     })();
 
-    const w = new Worker('./node_modules/comlink-fetch/src/fetch.worker.js');
-    const proxy = Comlink.proxy(w);
-    let title = '';
-    let lyrics = '';
-    let lyricsFromWorkers = []; // lyricsFromWorkers contain crawled lyrics from each worker
+    let song = {
+        artist: '',
+        title: '',
+        // Lyric results. Could be in an array, but there are some worries about concurrent read/write
+        azLyrics: '',
+        geniusLyrics: '',
+        // lyricFinderLyrics: '',
+        absoluteLyrics: '',
+    }
 
-    // In Progress: Add crawler here to get lyrics "async function test" & "function setLyrics"
+    function findMatchingHref(hrefs, stringToFind) {
+        for(var value of hrefs.values()) { 
+            if (value.textContent === stringToFind) {
+                return value.getAttribute("href")
+            }
+        }
+    }
 
-    // Wrapper function to let worker thread "fetch"
-    async function fetchLink(link) {
-      const API = await new proxy.Fetch();
-      API.setBaseUrl(link);
-      API.setDefaultHeaders('Content-Type', 'text/html');
+    function findFuzzyHref(hrefs, stringToFind) {
+        for(var value of hrefs.values()) { 
+            if (value.textContent.includes(stringToFind)) {
+                return value.getAttribute("href")
+            }
+        }
+    }
 
-      let fetchPromise = API.get('');
-      fetchPromise
-        .then((data) => {
-          // returns the fetch result of link in document object
-          let domparser = new DOMParser();
-          let doc = domparser.parseFromString(data, 'text/html');
-          return doc;
-        })
-        .then((doc) => {
-          // traverse the document object depending on the link type
-          // see the relevant function in crawler.js
-          let result;
-          if (link.toLowerCase().includes('azlyrics')) {
-            result = azLyrics(doc);
-          } else if (link.toLowerCase().includes('genius')) {
-            result = geniusLyrics(doc);
-          } else if (link.toLowerCase().includes('metrolyrics')) {
-            result = metroLyrics(doc);
-          } else {
-            result = false;
-          }
-          return result;
-        })
-        .then((result) => {
-        
-          //returns lyrics fetched from the relevant page
-          if (result !== undefined && result !== false) {
-            return lyricsFromWorkers.push(result);
-          }
-        });
+    function findHref(hrefs, stringToFind) {
+        let match = findMatchingHref(hrefs, stringToFind)
+        if (match === "" || match === null || match === undefined) {
+            match = findFuzzyHref(hrefs, stringToFind)
+        }
+        return match
     }
 
     // Main Function to start crawling workers
-    function setLyrics(songTitle) {
-      // convert title in a string format we can put in as a url
-      let converted = convertLyrics(songTitle);
-      converted += '+lyrics';
-      let googleUrl = google(converted);
+    function setLyrics() {
+        const worker = new Worker('./node_modules/comlink-fetch/src/fetch.worker.js');
+        const proxy = Comlink.proxy(worker);
+        let parser = new DOMParser();
 
+        async function getAzLyrics() {
+            // Set up basic informarion for AzLyrics
+            const API = await new proxy.Fetch;
+            API.setBaseUrl("https://www.azlyrics.com/");
+            API.setDefaultHeaders({ 'Content-Type': 'text/html' });
+            API.setDefaultBody({ lang: 'en' });
 
-      /*
-      //Getting lyrics from seed site(s)
-      //example seed sites would be something like www.azlyrics.com
-      //***might have to put https in front links for them to be fetchable
-      //I think there's two ways we can parallelize, the actual search itself or having multiple crawlers in parallel
-      //I think regardless we don't use Bryan's promise.All() to accomplish this.
+            // Fudge it a bit by starting at directory for artists with that begin with the same letter
+            // This is done to make the searching faster, as searching through the whole 
+            // site would be same routine just much more intensive
+            let artistFirstLetter = song.artist.charAt(0).toLowerCase()
+            let artistFirstLetterPageStub = artistFirstLetter + '.html'
+            let artistFirstLetterPage = await API.get(artistFirstLetterPageStub)
 
-      //I think you put all this code in a promise.All() call to have multiple crawlers working at once
-      //BFS 
-      crawlUrl(seedUrl).then((doc) => {
-          //links from the initial seed site page are here
-          //we iterate through these links
-          let refs = Array.from(
-          doc.querySelectorAll('a[href^="http"], a[href^="//www"], a[href^="www"]'));
+            // Get all links to all artists
+            let doc = parser.parseFromString(artistFirstLetterPage, "text/html")
+            let hrefs = doc.querySelectorAll('a[href^="' + artistFirstLetter + '/"]');
 
-          //links we have already visited
-          const visited = [];
+            // First, check if we get an exact match for the artist name
+            // If not, see if we can get a link that includes the artist name (more of a fuzzy match)
+            let artistSongPageStub = findHref(hrefs, song.artist)
 
-          //while the refs array isn't empty keep looking at links, this should never be empty ideally
-          while(refs && refs.length) {
-                //look at first link of refs
-                let link = refs[0].href
-                
-                //if this particular link hasn't been visited before, fetch
-                if(!visited.includes(link)){
+            // Get all links for all the songs by the artist
+            let artistSongPage = await API.get(artistSongPageStub)
+            doc = parser.parseFromString(artistSongPage, "text/html")
+            hrefs = doc.querySelectorAll('a[href^="../lyrics/"]');
 
-                    fetchLink(link)
-                    
-                    //fetchLink needs some modifications probably:
-                    //if this page has the lyrics (look at the artist and song title element on page if it exists?), grab lyrics and break. 
-                    //otherwise get all hrefs from this link and add them to refs
-                    
-                    
-                    //link is marked as allready visited so we don't visited it again
-                    visited.push(link);
-                    
-                    //gets rid of first element in array since we finished visiting it already
-                    refs.shift();
-                    
-                }
-                break;
-            }
-        });
-      */
+            // First, check if we get an exact match for the song name
+            // If not, see if we can get a link that includes the song name (more of a fuzzy match)
+            let lyricPageStub = findHref(hrefs, song.title)
 
-      // run google results and extract hrefs from search page
-      crawlUrl(googleUrl).then((doc) => {
-        //refs contains all anchor elements containing links reachable from this page.
-        let refs = Array.from(
-          doc.querySelectorAll('a[href^="http"], a[href^="//www"], a[href^="www"]')
-        );
-
-        console.log(refs)
-
-        const visited = [];
-        // Filter hrefs on whehter hrefs contain the word "azlyrics", "genius", "metrolyrics"
-        for (let i = 0; i < refs.length; i++) {
-          const temp = refs[i].href.toLowerCase();
-          if (
-            temp.includes('azlyrics') ||
-            temp.includes('genius') ||
-            temp.includes('metrolyrics')
-          ) {
-            visited.push(refs[i].href);
-          }
+            // Extract out lyrics with some CSS trickery
+            let lyricPage = await API.get(lyricPageStub)
+            doc = parser.parseFromString(lyricPage, "text/html")
+            let lyricsBlock = doc.getElementsByClassName('col-xs-12 col-lg-8 text-center');
+            let extractedLyrics = lyricsBlock[0].children[7].innerText;
+            song.azLyrics = extractedLyrics;
         }
 
-        console.log('visited after trying to filter', visited);
-        lyricsFromWorkers = [];
+        async function getGeniusLyrics() {
+            // Set up basic informarion for Genius
+            const API = await new proxy.Fetch;
+            API.setBaseUrl("https://genius.com/");
+            API.setDefaultHeaders({ 'Content-Type': 'text/html' });
+            API.setDefaultBody({ lang: 'en' });
 
-        console.log(
-          'lyricsFromWorkers <-- before promise.all should be empty ',
-          lyricsFromWorkers.slice()
-        );
+            // Fudge it a bit by starting at directory for artists with that begin with the same letter
+            // This is done to make the searching faster, as searching through the whole 
+            // site would be same routine just much more intensive
+            let artistFirstLetter = song.artist.charAt(0).toLowerCase()
+            let artistFirstLetterPageStub = 'artists-index/' + artistFirstLetter
+            let artistFirstLetterPage = await API.get(artistFirstLetterPageStub)
 
-        // Set lyricsFromWorkers empty to clear the previous lyric results;
+            // Get all links to all artists
+            let doc = parser.parseFromString(artistFirstLetterPage, "text/html")
+            let hrefs = doc.querySelectorAll('a[href^="https://genius.com/artists/"]');
 
-        /* Promise.all 
-        Start multiple workers in "parallel"  using Promise.all
-        The parallelism appralletly depends on the host's CPU 
-        Reference: https://anotherdev.xyz/promise-all-runs-in-parallel/ */
-        Promise.all(
-          visited.map((link) => {
-            fetchLink(link);
-          })
-        ).then(() => {
-          console.log(
-            'lyricsFromWorkers <-- after Promise all, should contain all workers results',
-            lyricsFromWorkers
-          );
-          return;
-        });
+            // First, check if we get an exact match for the artist name
+            // If not, see if we can get a link that includes the artist name (more of a fuzzy match)
+            let artistSongPageStub = findHref(hrefs, song.artist)
 
-        console.log(
-          'OUTSIDE ASYNC lyricsFromWorkers <-- should be empty due to async',
-          lyricsFromWorkers.slice()
-        );
-   
-      });
+            // Get all links for all the songs by the artist
+            let artistSongPage = await API.get(artistSongPageStub)
+            doc = parser.parseFromString(artistSongPage, "text/html")
+            hrefs = doc.querySelectorAll('a.mini_card');
+
+            // First, check if we get an exact match for the song name
+            // If not, see if we can get a link that includes the song name (more of a fuzzy match)
+            // Done differently from other sites as data is organized in a much more nested way
+            let lyricPageStub
+            for(var value of hrefs.values()) { 
+                let cardTitle = value.querySelector('div.mini_card-title');
+                if (cardTitle.textContent === song.title) {
+                    lyricPageStub = value.getAttribute("href")
+                }
+            }
+            if (lyricPageStub === "" || lyricPageStub === null || lyricPageStub === undefined) {
+                for(var value of hrefs.values()) { 
+                    let cardTitle = value.querySelector('div.mini_card-title');
+                    if (cardTitle.textContent.includes(song.title)) {
+                        lyricPageStub = value.getAttribute("href")
+                    }
+                }
+            }
+
+            // Extract out lyrics with some CSS trickery
+            let lyricPage = await API.get(lyricPageStub)
+            doc = parser.parseFromString(lyricPage, "text/html")
+            let lyricsBlock = doc.getElementsByTagName('p');
+            let extractedLyrics = lyricsBlock[0].innerText;
+            song.geniusLyrics = extractedLyrics;
+        }
+
+        //
+        // NOTE: Site is far too slow and unorganized to crawl
+        //
+        async function getLyricFinderLyrics() {
+            // Set up basic informarion for LyricFinder
+            const API = await new proxy.Fetch;
+            API.setBaseUrl("https://www.lyricfinder.org/");
+            API.setDefaultHeaders({ 'Content-Type': 'text/html' });
+            API.setDefaultBody({ lang: 'en' });
+
+            // Fudge it a bit by starting at directory for artists with that begin with the same letter
+            // This is done to make the searching faster, as searching through the whole 
+            // site would be same routine just much more intensive
+            let artistFirstLetter = song.artist.charAt(0).toUpperCase()
+            let artistFirstLetterPageStub = 'search/a-z/' + artistFirstLetter
+            let artistFirstLetterPage = await API.get(artistFirstLetterPageStub)
+
+            // Get all links to all artists
+            let doc = parser.parseFromString(artistFirstLetterPage, "text/html")
+            let hrefs = doc.querySelectorAll('a[href^="/artist/"]');
+
+            // First, check if we get an exact match for the artist name
+            // If not, see if we can get a link that includes the artist name (more of a fuzzy match)
+            let artistSongPageStub = findHref(hrefs, song.artist)
+            artistSongPageStub = artistSongPageStub.toString().replace(/\s/g,'').substring(1)
+
+            // Get all links for all the songs by the artist
+            let artistSongPage = await API.get(artistSongPageStub)
+            doc = parser.parseFromString(artistSongPage, "text/html")
+            hrefs = doc.querySelectorAll('a[href^="/lyrics/"]');
+            console.log(hrefs.length)
+
+            // More thorough search through each album, however, this quickly creates too many web workers
+            // let lyricPageStub
+            // for(let value of hrefs.values()) {
+            //     let albumPage = await API.get(value.getAttribute("href"))
+            //     doc = parser.parseFromString(albumPage, "text/html")
+            //     let trackHrefs = doc.querySelectorAll('a[href^="/search/tracks/"]');
+            //     let workingLyricPageStub = findHref(trackHrefs, song.title)
+            //     if (workingLyricPageStub !== "" || workingLyricPageStub !== null || workingLyricPageStub !== undefined) {
+            //         lyricPageStub = workingLyricPageStub
+            //     }
+            // }
+
+            // First, check if we get an exact match for the song name
+            // If not, see if we can get a link that includes the song name (more of a fuzzy match)
+            let lyricPageStub
+            for(var value of hrefs.values()) { 
+                console.log("value" , value.innerText)
+                let cardTitle = value.querySelector('div.mini_card-title');
+                if (cardTitle.textContent === song.title) {
+                    lyricPageStub = value.getAttribute("href")
+                }
+            }
+            if (lyricPageStub === "" || lyricPageStub === null || lyricPageStub === undefined) {
+                for(var value of hrefs.values()) { 
+                    let cardTitle = value.querySelector('div.mini_card-title');
+                    if (cardTitle.textContent.includes(song.title)) {
+                        lyricPageStub = value.getAttribute("href")
+                    }
+                }
+            }
+
+
+            // Extract out lyrics with some CSS trickery
+            let lyricPage = await API.get(lyricPageStub)
+            console.log("lyricPage", lyricPage.toString())
+            doc = parser.parseFromString(lyricPage, "text/html")
+            let lyricsBlock = doc.getElementsByClassName('col-lg-6');
+            let extractedLyrics = lyricsBlock[0].children[7].innerText;
+            song.lyricFinderLyrics = extractedLyrics;
+        }
+
+
+        async function getAbsoluteLyrics() {
+            // Set up basic informarion for AzLyrics
+            const API = await new proxy.Fetch;
+            API.setBaseUrl("http://www.absolutelyrics.com/");
+            API.setDefaultHeaders({ 'Content-Type': 'text/html' });
+            API.setDefaultBody({ lang: 'en' });
+
+            // Fudge it a bit by starting at directory for artists with that begin with the same letter
+            // This is done to make the searching faster, as searching through the whole 
+            // site would be same routine just much more intensive
+            let artistFirstLetter = song.artist.charAt(0).toLowerCase()
+            // NOTE: Cannot reliably click through pages, so just search first 3
+            // Not done in a for loop because async JS and for loops do not play well
+            let artistFirstLetterPageStub = 'lyrics/artistlist/' + artistFirstLetter
+            let artistFirstLetterPageStub2 = 'lyrics/artistlist/' + artistFirstLetter + '/2'
+            let artistFirstLetterPageStub3 = 'lyrics/artistlist/' + artistFirstLetter + '/3'
+            let artistFirstLetterPage = await API.get(artistFirstLetterPageStub)
+            let artistFirstLetterPage2 = await API.get(artistFirstLetterPageStub2)
+            let artistFirstLetterPage3 = await API.get(artistFirstLetterPageStub3)
+
+            // Get all links to all artists
+            let doc = parser.parseFromString(artistFirstLetterPage, "text/html")
+            let hrefs = doc.querySelectorAll('a[href^="/lyrics/artist/"]');
+            let doc2 = parser.parseFromString(artistFirstLetterPage2, "text/html")
+            let hrefs2 = doc2.querySelectorAll('a[href^="/lyrics/artist/"]');
+            let doc3 = parser.parseFromString(artistFirstLetterPage3, "text/html")
+            let hrefs3 = doc3.querySelectorAll('a[href^="/lyrics/artist/"]');
+
+            // First, check if we get an exact match for the artist name
+            // If not, see if we can get a link that includes the artist name (more of a fuzzy match)
+            let artistSongPageStub = findHref(hrefs, song.artist)
+            let artistSongPageStub2 = findHref(hrefs2, song.artist)
+            let artistSongPageStub3 = findHref(hrefs3, song.artist)
+
+            let foundStub
+            if (artistSongPageStub !== undefined) {
+                foundStub = artistSongPageStub
+            }
+            if (artistSongPageStub2 !== undefined) {
+                foundStub = artistSongPageStub2
+            }
+            if (artistSongPageStub3 !== undefined) {
+                foundStub = artistSongPageStub3
+            }
+
+            // Get all links for all the songs by the artist
+            let artistSongPage = await API.get(foundStub.toString().replace(/\s/g,'').substring(1))
+            doc = parser.parseFromString(artistSongPage, "text/html")
+            hrefs = doc.querySelectorAll('a[href^="/lyrics/view/"]');
+
+            // First, check if we get an exact match for the song name
+            // If not, see if we can get a link that includes the song name (more of a fuzzy match)
+            let lyricPageStub = findHref(hrefs, song.title)
+
+            // Extract out lyrics with some CSS trickery
+            let lyricPage = await API.get(lyricPageStub.toString().replace(/\s/g,'').substring(1))
+            doc = parser.parseFromString(lyricPage, "text/html")
+            let lyricsBlock = doc.getElementById('view_lyrics');
+            let extractedLyrics = lyricsBlock.innerText;
+            song.absoluteLyrics = extractedLyrics;
+        }
+
+        getAzLyrics()
+        getGeniusLyrics()
+        // getLyricFinderLyrics()
+        getAbsoluteLyrics()
     }
+
 
     //
     // Receive video information from content script to fetch relevant lyrics
@@ -501,21 +622,22 @@
 
     // Listen to message from content script for YouTube video details
     browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      console.log('Message from the content script: ' + request.title);
-      setLyrics(request.title + ' ' + request.artist);
+        song.artist = request.artist
+        song.title = request.title
+        setLyrics();
     });
 
     //
     // Listen to popup being opened and forward current lyrics
     //
-    browser.runtime.onConnect.addListener((port) => {
-      port.onMessage.addListener(function (m) {
+    browser.runtime.onConnect.addListener(port => {
+        port.onMessage.addListener(function(m) {
         console.log('Got connection from popup');
         // If port is ready, respond with lyrics
         if (m.ready) {
-          port.postMessage({ title: title, lyrics: lyrics });
+            port.postMessage(song);
         }
-      });
+        });
     });
 
 }());
