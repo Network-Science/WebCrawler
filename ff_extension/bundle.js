@@ -592,7 +592,7 @@
             let lyricPage = await API.get(lyricPageStub.toString().replace(/\s/g,'').substring(1))
             doc = parser.parseFromString(lyricPage, "text/html")
             let lyricsBlock = doc.getElementById('view_lyrics');
-            let extractedLyrics = lyricsBlock.innerText;\
+            let extractedLyrics = lyricsBlock.innerText;
             song.absoluteLyrics = extractedLyrics;
         }
 
