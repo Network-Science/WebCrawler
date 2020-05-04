@@ -85,16 +85,3 @@ JSONSearchForLinks = function (doc) {
 google = function (song) {
   return 'https://www.google.com/search?q=' + song;
 };
-
-// change white space of a string to '+' to allow inserting the value into the url
-convertLyrics = function (title) {
-  let converted = '';
-  for (let i = 0; i < title.length; i++) {
-    if (title[i] === ' ') {
-      converted += '+';
-    } else {
-      converted += title[i];
-    }
-  }
-  return converted;
-};
